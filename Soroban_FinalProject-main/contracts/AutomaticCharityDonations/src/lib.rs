@@ -1,106 +1,52 @@
 #![no_std]
-use soroban_sdk::{ contract, contractimpl, contracttype, token, Address, Env };
 
+use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, token};
+
+#[derive(Clone)]
 #[contracttype]
-pub enum StorageKey {
-    /// Admin. Value is an Address.
-    Admin,
+pub struct Account {
+    balance: u64,
 }
 
 #[contract]
-pub struct AutomaticCharityDonations;
+pub struct MicroPaymentContract;
+
 
 #[contractimpl]
-impl AutomaticCharityDonations {
-    pub fn set_admin(env: Env, new_admin: Address) {
-        if let Some(admin) = env.storage().instance().get::<_, Address>(&StorageKey::Admin) {
-            admin.require_auth();
-        }
-        env.storage().instance().set(&StorageKey::Admin, &new_admin);
-    }
-
-    /// Return the admin address.
-    pub fn admin(env: Env) -> Address {
-        env.storage().instance().get::<_, Address>(&StorageKey::Admin).unwrap()
-    }
-
-    // only admin of the contract can add charity account here
-    pub fn add_charity_account(env: Env, id: u32, account: Address) {
-        // only contract admin can add charity account here
-        Self::admin(env.clone()).require_auth();
-        env.storage().instance().set(&id, &account);
-    }
-
-    pub fn remove_charity_account(env: Env, id: u32) {
-        // only contract admin can remove charity account here
-        Self::admin(env.clone()).require_auth();
-        env.storage().instance().remove(&id);
-    }
-
-    // token transfer function to transfer tokens from user's account to another and it should automatically donate 2% of tokens to the charity contract
-    pub fn transact(
-        env: Env,
-        from: Address,
-        token: Address,
-        amount: i128,
-        to: Address,
-        charity_account_id: u32
-    ) {
-        // Make sure `from` address authorized the deposit call with all the
-        // arguments.
+impl MicroPaymentContract {
+    pub fn deposit(env: Env, from: Address, token: Address, amount: i128) {
+        // Ensure that the transaction sender is the contract owner
         from.require_auth();
 
-        let percent = 2;
-        let donation_amount = (amount * percent) / 100;
-        let transfer_amount = amount - donation_amount;
+        // Transfer tokens from sender to the contract
+        token::Client::new(&env, &token).transfer(&from, &env.current_contract_address(), &amount);
 
-        let charity_account_address_option: Option<Address> = env
-            .storage()
-            .instance()
-            .get(&charity_account_id)
-            .unwrap();
-        if let Some(charity_account_address) = charity_account_address_option {
-            // Address found, proceed with the transfer
-            token::Client
-                ::new(&env, &token)
-                .transfer(&from, &charity_account_address, &donation_amount);
-            token::Client::new(&env, &token).transfer(&from, &to, &transfer_amount);
+        // Update the sender's balance in the contract
+        let mut account: Account = env.storage().instance().get(&from).unwrap();
+        account.balance += amount as u64;
+        env.storage().instance().set(&from, &account);
+    }
 
-            // Update donation amounts
-            Self::set_user_donation_amount(env.clone(), from, &token, donation_amount);
-            Self::set_charity_donation_amount(
-                env.clone(),
-                charity_account_id,
-                &token,
-                donation_amount
-            );
+    pub fn withdraw(env: Env, from: Address, token: Address, amount: i128) {
+        // Ensure that the transaction sender is the owner of the account
+        from.require_auth();
+
+        // Check if the sender has sufficient balance
+        let account: Account = env.storage().instance().get(&from).unwrap();
+        if account.balance < amount as u64 {
+            panic!("Insufficient balance");
         }
-    }
 
-    fn set_user_donation_amount(env: Env, from: Address, token: &Address, donation_amount: i128) {
-        env.storage().instance().set(&(from, token), &donation_amount);
-    }
+        // Transfer tokens from the contract to the sender
+        token::Client::new(&env, &token).transfer(
+            &env.current_contract_address(),
+            &from,
+            &amount,
+        );
 
-    fn set_charity_donation_amount(
-        env: Env,
-        charity_account_id: u32,
-        token: &Address,
-        donation_amount: i128
-    ) {
-        env.storage().instance().set(&(charity_account_id, token), &donation_amount);
-    }
-
-    pub fn get_user_donation_amount(env: Env, from: Address, token: Address) -> i128 {
-        let donation_amount = env.storage().instance().get(&(from, token)).unwrap();
-
-        donation_amount
-    }
-
-    pub fn get_charity_donation_amoutn(env: Env, charity_account_id: u32, token: Address) -> i128 {
-        let donation_amount = env.storage().instance().get(&(charity_account_id, token)).unwrap();
-
-        donation_amount
+        // Update the sender's balance in the contract
+        let mut updated_account = account;
+        updated_account.balance -= amount as u64;
+        env.storage().instance().set(&from, &updated_account);
     }
 }
-
-mod test;
