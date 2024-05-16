@@ -1,12 +1,12 @@
 # Micro-Payment
 
-##Micro-Payment##
+##Micro-Payment
 This is a smart contract written in Rust using #![no_std] and designed to run on the Soroban blockchain platform. The contract enables users to make token transfers while supporting their favorite charities.
 
-##Contract Overview##
+##Contract Overview
 The Charity Donation Tracker smart contract is a decentralized application that facilitates charity donations through token transfers. The contract is managed by an admin who has the authority to set the admin address, add or remove charity accounts, and view donation amounts.
 
-##Key Features :##
+##Key Features :
 *--> Admin Control:* The admin address can be set by the contract creator, giving them control over charity account management.
 
 *--> Charity Registration:* Only the admin can add or remove charity accounts, each associated with a unique identifier (id) and address.
@@ -15,7 +15,7 @@ The Charity Donation Tracker smart contract is a decentralized application that 
 
 *--> Donation Analytics:* The contract tracks donation amounts for each user and charity account, providing a transparent and fair donation process.
 
-##Contract Functions##
+##Contract Functions
 *--> set_admin:* Sets the admin address.
 
 *--> register_charity:* Registers a new charity account with a specified ID and address.
@@ -28,10 +28,10 @@ The Charity Donation Tracker smart contract is a decentralized application that 
 
 *--> get_charity_donations:* Retrieves the total donation amount received by a charity account for a particular token.
 
-##Deployment and Usage##
+##Deployment and Usage
 To deploy this smart contract on the Soroban blockchain platform, compile the code and deploy the resulting bytecode. Once deployed, interact with the contract using Soroban-compatible tools or libraries. Smart Contract Address: "TO_BE_SET"
 
-##Project Structure##
+##Project Structure
 This repository follows the recommended structure for a Soroban project:
 .
 ├── contracts
